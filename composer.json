@@ -1,0 +1,33 @@
+{
+    "name": "frootbox/database",
+    "description": "Repositories, typed entities and a schema builder for migrations on top of Doctrine DBAL",
+    "type": "library",
+    "license": "LGPL-3.0-only",
+    "keywords": [
+        "database",
+        "dbal",
+        "repository",
+        "migrations",
+        "frootbox"
+    ],
+    "require": {
+        "php": ">=8.5",
+        "doctrine/dbal": "^4.5",
+        "doctrine/migrations": "^3.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "Frootbox\\Database\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Frootbox\\Database\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        }
+    }
+}
