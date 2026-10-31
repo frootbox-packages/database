@@ -9,7 +9,9 @@ declare(strict_types=1);
 namespace Frootbox\Database;
 
 use BackedEnum;
+use DateTimeImmutable;
 use DateTimeInterface;
+use DateTimeZone;
 
 /**
  * Column names and values on their way into the database.
@@ -40,7 +42,8 @@ final class Values
             null === $value, \is_int($value), \is_float($value), \is_string($value) => $value,
             \is_bool($value) => $value ? 1 : 0,
             $value instanceof BackedEnum => $value->value,
-            $value instanceof DateTimeInterface => $value->format(self::DATE_FORMAT),
+            // Stored in the time zone of PHP, the one they are read back in.
+            $value instanceof DateTimeInterface => DateTimeImmutable::createFromInterface($value)->setTimezone(new DateTimeZone(date_default_timezone_get()))->format(self::DATE_FORMAT),
             \is_array($value) => json_encode($value, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE | \JSON_PRESERVE_ZERO_FRACTION),
             default => throw new RepositoryException(\sprintf('A value of type %s cannot be stored.', get_debug_type($value))),
         };
