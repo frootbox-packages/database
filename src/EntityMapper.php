@@ -59,6 +59,23 @@ final class EntityMapper
     }
 
     /**
+     * The declared type of a property, e.g. "string" or "int", null if
+     * the entity has no such property.
+     *
+     * @param class-string<Entity> $class
+     */
+    public static function type(string $class, string $property): ?string
+    {
+        foreach (self::fields($class) as $field) {
+            if ($field['name'] === $property) {
+                return $field['type'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @param class-string<Entity> $class
      *
      * @return list<array{name: string, column: string, type: string, nullable: bool, optional: bool}>

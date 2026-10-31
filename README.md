@@ -102,6 +102,10 @@ legacy tables can still be changed. Also available: `alterTable()`,
 `renameTable()` and `dropTable()`. Migrations run in a transaction except
 on MySQL and MariaDB, which end transactions on schema changes.
 
+For ids that must exist before a row is saved, e.g. for drafts, use
+`$table->ulid()` instead of `$table->id()`. When the entity's `id` is a
+`string`, `insert()` creates a new `Ulid` unless one is given.
+
 ## License
 
 LGPL-3.0-only

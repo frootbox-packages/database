@@ -67,6 +67,25 @@ final class Blueprint
         return $column;
     }
 
+    /**
+     * ULID column of 26 characters (see Frootbox\Database\Ulid). Named "id"
+     * it is the primary key; repositories then create the ULID on insert.
+     * With another name it refers to such a row:
+     *
+     *     $table->ulid();
+     *     $table->ulid('parent_id')->nullable();
+     */
+    public function ulid(string $name = 'id'): ColumnDefinition
+    {
+        $column = $this->add($name, Types::STRING, length: 26);
+
+        if ('id' === $name) {
+            $this->primary = [$column->name];
+        }
+
+        return $column;
+    }
+
     public function string(string $name, int $length = 255): ColumnDefinition
     {
         return $this->add($name, Types::STRING, length: $length);

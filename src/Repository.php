@@ -137,6 +137,10 @@ abstract class Repository
     {
         $now = new DateTimeImmutable();
 
+        if (!\array_key_exists('id', $values) && 'string' === EntityMapper::type($this->entity(), 'id')) {
+            $values['id'] = Ulid::generate();
+        }
+
         foreach (['createdAt' => 'created_at', 'updatedAt' => 'updated_at'] as $property => $column) {
             if ($this->hasColumn($column) && !\array_key_exists($property, $values) && !\array_key_exists($column, $values)) {
                 $values[$column] = $now;
