@@ -96,9 +96,11 @@ $this->createTable('articles', function (Blueprint $table): void {
 });
 ```
 
-Also available: `alterTable()`, `renameTable()` and `dropTable()`. Migrations
-run in a transaction except on MySQL and MariaDB, which end transactions on
-schema changes.
+New tables, columns and indexes must have snake_case names of at most 64
+characters (`published_at`); existing names are accepted as they are, so
+legacy tables can still be changed. Also available: `alterTable()`,
+`renameTable()` and `dropTable()`. Migrations run in a transaction except
+on MySQL and MariaDB, which end transactions on schema changes.
 
 ## License
 

@@ -24,9 +24,15 @@ use Doctrine\DBAL\Types\Types;
  *     $table->string('title');
  *     $table->json('content')->nullable();
  *     $table->timestamps();
+ *
+ * New tables, columns and indexes get snake_case names of at most 64
+ * characters, e.g. "published_at". Existing names are taken as they are,
+ * so legacy tables can still be changed.
  */
 final class Blueprint
 {
+    public const string NAME_PATTERN = '/^[a-z][a-z0-9_]{0,63}$/';
+
     /** @var list<ColumnDefinition> */
     private array $columns = [];
 
@@ -128,7 +134,7 @@ final class Blueprint
      */
     public function index(string|array $columns, ?string $name = null): void
     {
-        $this->indexes[] = [$this->names((array) $columns), IndexType::REGULAR, $name];
+        $this->indexes[] = [$this->names((array) $columns), IndexType::REGULAR, null === $name ? null : $this->newName($name, 'Index')];
     }
 
     /**
@@ -136,7 +142,7 @@ final class Blueprint
      */
     public function unique(string|array $columns, ?string $name = null): void
     {
-        $this->indexes[] = [$this->names((array) $columns), IndexType::UNIQUE, $name];
+        $this->indexes[] = [$this->names((array) $columns), IndexType::UNIQUE, null === $name ? null : $this->newName($name, 'Index')];
     }
 
     public function dropColumn(string ...$columns): void
@@ -146,7 +152,7 @@ final class Blueprint
 
     public function renameColumn(string $from, string $to): void
     {
-        $this->renameColumns[$this->name($from)] = $this->name($to);
+        $this->renameColumns[$this->name($from)] = $this->newName($to, 'Column');
     }
 
     public function dropIndex(string $name): void
@@ -226,7 +232,7 @@ final class Blueprint
 
     private function add(string $name, string $type, ?int $length = null, ?int $precision = null, int $scale = 0): ColumnDefinition
     {
-        $column = new ColumnDefinition($this->name($name), $type, $length, $precision, $scale);
+        $column = new ColumnDefinition($this->newName($name, 'Column'), $type, $length, $precision, $scale);
         $this->columns[] = $column;
 
         return $column;
@@ -287,6 +293,33 @@ final class Blueprint
         }
 
         return array_values(array_map($this->name(...), $names));
+    }
+
+    /**
+     * Checks a name that is about to be created.
+     *
+     * @return non-empty-string
+     */
+    public static function snakeCase(string $name, string $what, ?string $table = null): string
+    {
+        if ('' === $name || 1 !== preg_match(self::NAME_PATTERN, $name)) {
+            throw new SchemaException(\sprintf(
+                '%s name "%s"%s must be snake_case with at most 64 characters, e.g. "published_at".',
+                $what,
+                $name,
+                null === $table ? '' : ' in table "' . $table . '"',
+            ));
+        }
+
+        return $name;
+    }
+
+    /**
+     * @return non-empty-string
+     */
+    private function newName(string $name, string $what): string
+    {
+        return self::snakeCase($name, $what, $this->table);
     }
 
     /**

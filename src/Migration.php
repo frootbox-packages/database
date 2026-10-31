@@ -46,7 +46,7 @@ abstract class Migration extends AbstractMigration
      */
     protected function createTable(string $name, \Closure $define): void
     {
-        $blueprint = new Blueprint($this->tableName($name));
+        $blueprint = new Blueprint(Blueprint::snakeCase($name, 'Table'));
         $define($blueprint);
 
         foreach ($this->platform->getCreateTableSQL($blueprint->toTable()) as $sql) {
@@ -76,7 +76,7 @@ abstract class Migration extends AbstractMigration
 
     protected function renameTable(string $from, string $to): void
     {
-        $this->addSql($this->platform->getRenameTableSQL($this->tableName($from), $this->tableName($to)));
+        $this->addSql($this->platform->getRenameTableSQL($this->tableName($from), Blueprint::snakeCase($to, 'Table')));
     }
 
     protected function dropTable(string $name): void

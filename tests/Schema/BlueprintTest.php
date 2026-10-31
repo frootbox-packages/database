@@ -123,4 +123,37 @@ final class BlueprintTest extends TestCase
 
         new Blueprint('news')->string('');
     }
+
+    #[DataProvider('badNames')]
+    public function testNewNamesAreSnakeCase(\Closure $define): void
+    {
+        $this->expectException(SchemaException::class);
+        $this->expectExceptionMessage('must be snake_case');
+
+        $define(new Blueprint('news'));
+    }
+
+    /**
+     * @return iterable<string, array{\Closure(Blueprint): mixed}>
+     */
+    public static function badNames(): iterable
+    {
+        yield 'camelCase column' => [static fn(Blueprint $table) => $table->dateTime('publishedAt')];
+        yield 'PascalCase column' => [static fn(Blueprint $table) => $table->string('Title')];
+        yield 'dashed column' => [static fn(Blueprint $table) => $table->string('sub-title')];
+        yield 'too long' => [static fn(Blueprint $table) => $table->string(str_repeat('a', 65))];
+        yield 'renamed to camelCase' => [static fn(Blueprint $table) => $table->renameColumn('Old_Name', 'newName')];
+        yield 'index name' => [static fn(Blueprint $table) => $table->index('title', 'TitleIndex')];
+        yield 'table name' => [static fn(Blueprint $table) => Blueprint::snakeCase('NewsItems', 'Table')];
+    }
+
+    public function testExistingNamesAreTakenAsTheyAre(): void
+    {
+        $table = new Blueprint('legacy');
+        $table->dropColumn('OldColumn');
+        $table->renameColumn('Other_Column', 'other_column');
+        $table->dropIndex('IDX_Legacy');
+
+        self::assertSame('published_at', Blueprint::snakeCase('published_at', 'Column'));
+    }
 }
