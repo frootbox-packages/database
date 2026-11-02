@@ -2,7 +2,7 @@
     "name": "frootbox/database",
     "description": "Repositories, typed entities and a schema builder for migrations on top of Doctrine DBAL",
     "type": "library",
-    "license": "LGPL-3.0-only",
+    "license": "MIT",
     "keywords": [
         "database",
         "dbal",

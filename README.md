@@ -108,4 +108,4 @@ For ids that must exist before a row is saved, e.g. for drafts, use
 
 ## License
 
-LGPL-3.0-only
+MIT, see [`LICENSE`](LICENSE).
