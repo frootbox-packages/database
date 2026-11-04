@@ -106,6 +106,12 @@ For ids that must exist before a row is saved, e.g. for drafts, use
 `$table->ulid()` instead of `$table->id()`. When the entity's `id` is a
 `string`, `insert()` creates a new `Ulid` unless one is given.
 
+## Source and issues
+
+This package is developed in the [Frootbox monorepo](https://github.com/Frootbox/frootbox)
+and mirrored here read-only. Questions, bugs and ideas go there, see the
+[documentation](https://github.com/Frootbox/frootbox/tree/main/documentation).
+
 ## License
 
 MIT, see [`LICENSE`](LICENSE).
