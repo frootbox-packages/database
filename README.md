@@ -96,6 +96,14 @@ $this->createTable('articles', function (Blueprint $table): void {
 });
 ```
 
+Columns: `id()`, `ulid()`, `string($name, $length = 255)`, `text()`,
+`integer()`, `bigInteger()`, `boolean()`, `decimal($name, $precision,
+$scale)`, `date()`, `dateTime()`, `json()` and `timestamps()` for
+`created_at` and `updated_at`. Each one can be `->nullable()`,
+`->default($value)`, `->unique()` or `->index()`, an integer also
+`->unsigned()`. `primary()`, `index()` and `unique()` on the table take
+several columns.
+
 New tables, columns and indexes must have snake_case names of at most 64
 characters (`published_at`); existing names are accepted as they are, so
 legacy tables can still be changed. Also available: `alterTable()`,
