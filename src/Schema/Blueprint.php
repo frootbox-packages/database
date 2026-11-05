@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace Frootbox\Database\Schema;
 
+use Doctrine\DBAL\Schema\ColumnEditor;
 use Doctrine\DBAL\Schema\Index;
 use Doctrine\DBAL\Schema\Index\IndexType;
 use Doctrine\DBAL\Schema\PrimaryKeyConstraint;
@@ -24,6 +25,10 @@ use Doctrine\DBAL\Types\Types;
  *     $table->string('title');
  *     $table->json('content')->nullable();
  *     $table->timestamps();
+ *
+ * In alterTable(), ->change() changes an existing column:
+ *
+ *     $table->string('email')->nullable()->change();
  *
  * New tables, columns and indexes get snake_case names of at most 64
  * characters, e.g. "published_at". Existing names are taken as they are,
@@ -191,6 +196,10 @@ final class Blueprint
         $editor = Table::editor()->setUnquotedName($this->table);
 
         foreach ($this->columns as $column) {
+            if ($column->isChange()) {
+                throw new SchemaException(\sprintf('Column "%s" of table "%s" cannot be changed, the table does not exist yet.', $column->name, $this->table));
+            }
+
             $editor->addColumn($column->toColumn());
         }
 
@@ -239,7 +248,19 @@ final class Blueprint
         }
 
         foreach ($this->columns as $column) {
-            $editor->addColumn($column->toColumn());
+            if (!$column->isChange()) {
+                $editor->addColumn($column->toColumn());
+
+                continue;
+            }
+
+            if ($column->isUnique() || $column->isIndexed()) {
+                throw new SchemaException(\sprintf('Column "%s" of table "%s" is changed, its indexes stay; add a new index with index() or unique() on the table.', $column->name, $this->table));
+            }
+
+            $editor->modifyColumnByUnquotedName($column->name, static function (ColumnEditor $existing) use ($column): void {
+                $column->describe($existing);
+            });
         }
 
         foreach ($this->collectIndexes() as $index) {

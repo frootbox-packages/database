@@ -8,13 +8,16 @@ declare(strict_types=1);
 
 namespace Frootbox\Database\Tests\Schema;
 
+use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Platforms\MariaDBPlatform;
 use Doctrine\DBAL\Platforms\MySQL80Platform;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
+use Doctrine\DBAL\Tools\DsnParser;
 use Frootbox\Database\Schema\Blueprint;
 use Frootbox\Database\Schema\ColumnDefinition;
 use Frootbox\Database\Schema\SchemaException;
+use Frootbox\Database\Tests\Support\TestDatabase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -155,5 +158,50 @@ final class BlueprintTest extends TestCase
         $table->dropIndex('IDX_Legacy');
 
         self::assertSame('published_at', Blueprint::snakeCase('published_at', 'Column'));
+    }
+
+    public function testChangesAnExistingColumnAndKeepsItsIndex(): void
+    {
+        $connection = DriverManager::getConnection(new DsnParser()->parse(TestDatabase::url()));
+        TestDatabase::dropTables($connection, 'blueprint_people');
+        $create = new Blueprint('blueprint_people');
+        $create->id();
+        $create->string('email')->unique();
+        $create->string('kind', 20)->default('person');
+
+        foreach ($connection->getDatabasePlatform()->getCreateTableSQL($create->toTable()) as $sql) {
+            $connection->executeStatement($sql);
+        }
+
+        $connection->insert('blueprint_people', ['email' => 'a@example.test']);
+        $schemaManager = $connection->createSchemaManager();
+        $current = $schemaManager->introspectTableByUnquotedName('blueprint_people');
+        $alter = new Blueprint('blueprint_people');
+        $alter->string('email')->nullable()->change();
+        $diff = $schemaManager->createComparator()->compareTables($current, $alter->applyTo($current));
+
+        foreach ($connection->getDatabasePlatform()->getAlterTableSQL($diff) as $sql) {
+            $connection->executeStatement($sql);
+        }
+
+        $connection->insert('blueprint_people', ['email' => null]);
+        $connection->insert('blueprint_people', ['email' => null]);
+        $changed = $schemaManager->introspectTableByUnquotedName('blueprint_people');
+
+        self::assertFalse($changed->getColumn('email')->getNotnull());
+        self::assertSame('person', $changed->getColumn('kind')->getDefault(), 'Other columns stay.');
+        self::assertSame(['a@example.test', null, null], $connection->fetchFirstColumn('SELECT email FROM blueprint_people ORDER BY id'));
+        self::assertCount(1, array_filter($changed->getIndexes(), static fn($index): bool => $index->isUnique() && !$index->isPrimary()), 'The unique index stays.');
+
+        TestDatabase::dropTables($connection, 'blueprint_people');
+    }
+
+    public function testCannotChangeAColumnOfANewTable(): void
+    {
+        $table = new Blueprint('people');
+        $table->string('email')->nullable()->change();
+
+        $this->expectException(SchemaException::class);
+        $table->toTable();
     }
 }

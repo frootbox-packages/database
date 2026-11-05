@@ -9,10 +9,12 @@ declare(strict_types=1);
 namespace Frootbox\Database\Schema;
 
 use Doctrine\DBAL\Schema\Column;
+use Doctrine\DBAL\Schema\ColumnEditor;
 
 /**
  * One column of a Blueprint. Modifiers can be chained:
- * $table->string('slug')->nullable()->unique().
+ * $table->string('slug')->nullable()->unique(). In alterTable(),
+ * ->change() replaces an existing column with this definition.
  */
 final class ColumnDefinition
 {
@@ -29,6 +31,8 @@ final class ColumnDefinition
     private bool $unique = false;
 
     private bool $index = false;
+
+    private bool $change = false;
 
     /**
      * @param non-empty-string $name
@@ -90,6 +94,24 @@ final class ColumnDefinition
         return $this;
     }
 
+    /**
+     * Changes the existing column of this name instead of adding one, e.g.
+     * $table->string('email')->nullable()->change(). The definition is the
+     * whole new column: type, length, null and default as written here.
+     * Indexes stay as they are.
+     */
+    public function change(): self
+    {
+        $this->change = true;
+
+        return $this;
+    }
+
+    public function isChange(): bool
+    {
+        return $this->change;
+    }
+
     public function isUnique(): bool
     {
         return $this->unique;
@@ -102,20 +124,22 @@ final class ColumnDefinition
 
     public function toColumn(): Column
     {
-        $editor = Column::editor()
-            ->setUnquotedName($this->name)
+        return $this->describe(Column::editor()->setUnquotedName($this->name))->create();
+    }
+
+    /**
+     * Sets everything this definition says on a column, new or existing.
+     */
+    public function describe(ColumnEditor $editor): ColumnEditor
+    {
+        return $editor
             ->setTypeName($this->type)
             ->setLength($this->length)
             ->setPrecision($this->precision)
             ->setScale($this->scale)
             ->setNotNull(!$this->nullable)
             ->setUnsigned($this->unsigned)
-            ->setAutoincrement($this->autoincrement);
-
-        if ($this->hasDefault) {
-            $editor->setDefaultValue($this->default);
-        }
-
-        return $editor->create();
+            ->setAutoincrement($this->autoincrement)
+            ->setDefaultValue($this->hasDefault ? $this->default : null);
     }
 }

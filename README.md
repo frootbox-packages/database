@@ -110,6 +110,16 @@ legacy tables can still be changed. Also available: `alterTable()`,
 `renameTable()` and `dropTable()`. Migrations run in a transaction except
 on MySQL and MariaDB, which end transactions on schema changes.
 
+In `alterTable()`, `dropColumn()`, `renameColumn()` and `dropIndex()` work
+on existing columns and indexes, and `->change()` replaces an existing
+column with a new definition while its indexes stay:
+
+```php
+$this->alterTable('users', function (Blueprint $table): void {
+    $table->string('email')->nullable()->change();
+});
+```
+
 For ids that must exist before a row is saved, e.g. for drafts, use
 `$table->ulid()` instead of `$table->id()`. When the entity's `id` is a
 `string`, `insert()` creates a new `Ulid` unless one is given.
