@@ -31,6 +31,22 @@ use Frootbox\Database\Schema\SchemaException;
  */
 abstract class Migration extends AbstractMigration
 {
+    /** @var (\Closure(string, int|string, array<string, mixed>, array<string, mixed>): void)|null */
+    private static ?\Closure $recorder = null;
+
+    /**
+     * Who hears of rows a migration changes with updateRow(), e.g. the log
+     * of actions of the CMS. Null stops it.
+     *
+     * @internal
+     *
+     * @param (\Closure(string, int|string, array<string, mixed>, array<string, mixed>): void)|null $recorder table, id, before, after
+     */
+    public static function recordWith(?\Closure $recorder): void
+    {
+        self::$recorder = $recorder;
+    }
+
     /**
      * MySQL and MariaDB end a transaction with every schema change, so
      * migrations run in a transaction only on the other databases.
@@ -82,6 +98,36 @@ abstract class Migration extends AbstractMigration
     protected function dropTable(string $name): void
     {
         $this->addSql($this->platform->getDropTableSQL($this->tableName($name)));
+    }
+
+    /**
+     * Changes columns of one row, e.g. content the migration rewrites. In
+     * the CMS the change is kept in the log of actions, so it shows in the
+     * history of a page like any other change.
+     *
+     * @param array<string, mixed> $before the columns as they were
+     * @param array<string, mixed> $after  the same columns as they become
+     */
+    protected function updateRow(string $table, int|string $id, array $before, array $after): void
+    {
+        if ([] === $after) {
+            return;
+        }
+
+        $sets = [];
+
+        foreach (array_keys($after) as $column) {
+            $sets[] = $this->connection->quoteSingleIdentifier($column) . ' = ?';
+        }
+
+        $this->addSql(
+            \sprintf('UPDATE %s SET %s WHERE %s = ?', $this->connection->quoteSingleIdentifier($table), implode(', ', $sets), $this->connection->quoteSingleIdentifier('id')),
+            [...array_values($after), $id],
+        );
+
+        if (null !== self::$recorder) {
+            (self::$recorder)($table, $id, $before, $after);
+        }
     }
 
     /**
